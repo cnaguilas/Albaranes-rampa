@@ -91,6 +91,7 @@ button.sm{padding:9px 10px;font-size:14px}
 
 <label>Servicio *</label>
 <div class="svc" id="svc"></div>
+<div id="finw" style="display:none"><label>Bono válido hasta (se calcula solo, puedes cambiarla)</label><input type="date" id="fin"></div>
 
 <div class="row">
 <div><label>Importe € (opcional)</label><input id="imp" type="number" inputmode="decimal" step="0.01"></div>
@@ -133,11 +134,15 @@ function resetForm(){
   var d=new Date();$("fecha").value=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
   $("num").value=nextNum();
   ["naut","cif","tel","mail","emb","mat","imp","obs"].forEach(function(i){$(i).value=""});
-  document.querySelectorAll('input[name=sv]').forEach(function(r){r.checked=false});
+  document.querySelectorAll('input[name=sv]').forEach(function(r){r.checked=false});$("fin").value="";$("finw").style.display="none";
 }
 function fillNl(){$("nl").innerHTML=Object.keys(nauts).sort().map(function(n){return'<option value="'+esc(n)+'">'}).join("")}
 $("naut").addEventListener("input",function(){var n=nauts[this.value];if(n){$("cif").value=n.cif||"";$("tel").value=n.tel||"";$("mail").value=n.mail||""}});
 
+function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function finBono(f){var p=f.split("-"),y=+p[0],m=+p[1]-1,d=+p[2],n=m+1,last=new Date(y,n+1,0).getDate();return iso(new Date(y,n,Math.min(d,last)))}
+function updFin(){var r=document.querySelector("input[name=sv]:checked"),w=$("finw");if(r&&r.value==="Bono mes rampa"){w.style.display="block";if($("fecha").value)$("fin").value=finBono($("fecha").value)}else{w.style.display="none";$("fin").value=""}}
+$("svc").addEventListener("change",updFin);$("fecha").addEventListener("change",updFin);
 function pdfBlob(a){
   var J=window.jspdf;if(!J)throw new Error("PDF no disponible (sin conexión al cargar la librería)");
   var d=new J.jsPDF({unit:"mm",format:"a4"}),W=210,m=15;
@@ -154,7 +159,7 @@ function pdfBlob(a){
   box(95,22,"EMBARCACIÓN");d.setFontSize(12);d.text(a.emb,m+3,105);d.setFontSize(10);d.text("Matrícula / folio: "+(a.mat||"-"),m+3,111);
   box(122,40,"SERVICIO");d.setFontSize(11);
   SERV.forEach(function(s,i){var x=m+4+(i%2)*85,y=132+Math.floor(i/2)*11;d.setLineWidth(.4);d.setDrawColor(0);d.rect(x,y-4,5,5);if(a.serv===s){d.setFont("helvetica","bold");d.text("X",x+1.1,y)}d.setFont("helvetica",a.serv===s?"bold":"normal");d.text(s,x+8,y)});
-  var y=167;
+  var y=167;if(a.fin){d.setFont("helvetica","bold");d.setFontSize(11);d.text("Bono válido del "+fdate(a.fecha)+" al "+fdate(a.fin),m,y);y+=9}
   if(a.imp!==""&&a.imp!=null){d.setFont("helvetica","bold");d.setFontSize(12);d.text("Importe: "+Number(a.imp).toFixed(2).replace(".",",")+" €",m,y);y+=9}
   d.setFont("helvetica","normal");d.setFontSize(10);
   if(a.obs){d.setFont("helvetica","bold");d.text("Observaciones:",m,y);d.setFont("helvetica","normal");d.text(d.splitTextToSize(a.obs,W-2*m),m,y+5)}
@@ -165,7 +170,7 @@ function pdfBlob(a){
   return d.output("blob");
 }
 function fname(a){return"Albaran-"+a.num+"-"+a.naut.replace(/[^A-Za-z0-9]+/g,"_").slice(0,30)+".pdf"}
-function msg(a){return"Albarán nº "+a.num+" · Puerto Deportivo C.N. Águilas\nFecha: "+fdate(a.fecha)+"\nNáutica: "+a.naut+"\nEmbarcación: "+a.emb+(a.mat?" ("+a.mat+")":"")+"\nServicio: "+a.serv+(a.imp!==""&&a.imp!=null?"\nImporte: "+Number(a.imp).toFixed(2).replace(".",",")+" €":"")}
+function msg(a){return"Albarán nº "+a.num+" · Puerto Deportivo C.N. Águilas\nFecha: "+fdate(a.fecha)+"\nNáutica: "+a.naut+"\nEmbarcación: "+a.emb+(a.mat?" ("+a.mat+")":"")+"\nServicio: "+a.serv+(a.fin?" (válido hasta "+fdate(a.fin)+")":"")+(a.imp!==""&&a.imp!=null?"\nImporte: "+Number(a.imp).toFixed(2).replace(".",",")+" €":"")}
 function find(id){return albs.filter(function(a){return a.id===id})[0]}
 
 async function dl(a){
@@ -175,14 +180,19 @@ async function dl(a){
     else{var u=URL.createObjectURL(b),l=document.createElement("a");l.href=u;l.download=fname(a);document.body.appendChild(l);l.click();l.remove();setTimeout(function(){URL.revokeObjectURL(u)},4000)}
   }catch(e){if(!e||e.code!=="declined")toast("No se pudo descargar: "+(e&&e.message||e))}
 }
+function waNum(t){var n=(t||"").replace(/[^\d+]/g,"");if(n.indexOf("+")===0)n=n.slice(1);else if(n.indexOf("00")===0)n=n.slice(2);else if(n.length===9)n="34"+n;return n.replace(/\D/g,"")}
 async function send(a,kind){
+  var tel=waNum(a.tel);
+  if(kind==="wa"&&tel){
+    window.open("https://wa.me/"+tel+"?text="+encodeURIComponent(msg(a)),"_blank");
+    toast("En WhatsApp pulsa el clip y adjunta el PDF descargado");dl(a);return;
+  }
   var b;try{b=pdfBlob(a)}catch(e){return toast(e.message)}
   var f=new File([b],fname(a),{type:"application/pdf"});
   try{
     if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:"Albarán "+a.num,text:msg(a)});return}
   }catch(e){if(e&&e.name==="AbortError")return}
-  var tel=(a.tel||"").replace(/\D/g,"");if(tel.length===9)tel="34"+tel;
-  if(kind==="wa"){window.open("https://wa.me/"+tel+"?text="+encodeURIComponent(msg(a)),"_blank")}
+  if(kind==="wa"){window.open("https://wa.me/?text="+encodeURIComponent(msg(a)),"_blank")}
   else{window.open("mailto:"+encodeURIComponent(a.mail||"")+"?subject="+encodeURIComponent("Albarán "+a.num+" - Puerto Deportivo C.N. Águilas")+"&body="+encodeURIComponent(msg(a)+"\n\nSe adjunta el albarán en PDF."),"_blank")}
   toast("Descarga el PDF y adjúntalo al mensaje");dl(a);
 }
@@ -206,7 +216,7 @@ document.addEventListener("click",function(e){
 });
 $("save").addEventListener("click",function(){
   var sel=document.querySelector("input[name=sv]:checked");
-  var a={id:"a"+Date.now(),num:$("num").value,fecha:$("fecha").value,naut:$("naut").value.trim(),cif:$("cif").value.trim(),tel:$("tel").value.trim(),mail:$("mail").value.trim(),emb:$("emb").value.trim(),mat:$("mat").value.trim(),serv:sel?sel.value:"",imp:$("imp").value,resp:$("resp").value.trim(),obs:$("obs").value.trim()};
+  var a={id:"a"+Date.now(),num:$("num").value,fecha:$("fecha").value,naut:$("naut").value.trim(),cif:$("cif").value.trim(),tel:$("tel").value.trim(),mail:$("mail").value.trim(),emb:$("emb").value.trim(),mat:$("mat").value.trim(),serv:sel?sel.value:"",fin:(sel&&sel.value==="Bono mes rampa")?$("fin").value:"",imp:$("imp").value,resp:$("resp").value.trim(),obs:$("obs").value.trim()};
   if(!a.fecha)return toast("Falta la fecha");
   if(!a.naut)return toast("Falta la náutica");
   if(!a.emb)return toast("Falta la embarcación");
