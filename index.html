@@ -65,6 +65,7 @@ button.sm{padding:9px 10px;font-size:14px}
 <div><span>Email</span><a href="mailto:administracion@cnaguilas.com">administracion@cnaguilas.com</a></div>
 </div>
 </section>
+<button class="full" id="inst" hidden style="margin-bottom:12px">📲 Instalar app</button>
 
 <div class="card">
 <h2>Nuevo albarán</h2>
@@ -216,6 +217,15 @@ $("save").addEventListener("click",function(){
   showRes(a);renderHist();fillNl();resetForm();$("resp").value=a.resp;
 });
 resetForm();$("resp").value=ld("resp","");fillNl();renderHist();
+var dp=null;
+function isApp(){return (window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone===true}
+if(!isApp())$("inst").hidden=false;
+window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();dp=e});
+window.addEventListener("appinstalled",function(){$("inst").hidden=true;toast("App instalada. Búscala en tus aplicaciones como Albaranes.")});
+$("inst").addEventListener("click",async function(){
+  if(dp){dp.prompt();try{await dp.userChoice}catch(e){}dp=null}
+  else alert("Si ya la instalaste, ciérrala y búscala en tus aplicaciones (icono del ancla, «Albaranes»); mantén pulsado el icono para llevarlo a la pantalla de inicio.\n\nSi no está instalada: menú ⋮ de Chrome → Instalar aplicación.")
+});
 if("serviceWorker"in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
 </script>
 </body>
