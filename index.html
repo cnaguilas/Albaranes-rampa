@@ -47,8 +47,15 @@ button.sm{padding:9px 10px;font-size:14px}
 .estado-con{display:flex;align-items:center;gap:6px;font-size:12px;opacity:.9;margin-top:10px}
 .punto{width:9px;height:9px;border-radius:50%;background:#4cc38a;flex:none}
 .punto.off{background:#f5b451}
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;position:sticky;top:env(safe-area-inset-top,0px);z-index:4;background:var(--bg);padding:4px 0}
-.tabs button{background:var(--card);color:var(--tx);border:1px solid var(--bd)}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;position:sticky;top:env(safe-area-inset-top,0px);z-index:4;background:var(--bg);padding:4px 0}
+.tabs button{background:var(--card);color:var(--tx);border:1px solid var(--bd);padding:12px 4px;font-size:14px}
+.tipo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+.tipo label{margin:0;color:var(--tx);font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--bd);border-radius:10px;padding:11px;background:var(--bg)}
+.tipo input{width:auto;margin:0;accent-color:var(--pri)}
+.tipo label:has(input:checked){border-color:var(--pri);background:color-mix(in srgb,var(--pri) 14%,var(--bg));color:var(--pri)}
+.etq{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:2px 7px;border-radius:6px;background:var(--bg);border:1px solid var(--bd);color:var(--mut);vertical-align:middle;margin-left:6px}
+.modal-fondo{position:fixed;inset:0;background:rgba(10,20,35,.55);z-index:15;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--card);border-radius:14px;padding:16px;max-width:480px;width:100%;max-height:92vh;overflow:auto}
 .tabs button.on{background:var(--pri);color:var(--pri-tx);border-color:var(--pri)}
 .acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
 .item{border-top:1px solid var(--bd);padding:12px 0}
@@ -120,6 +127,7 @@ footer button{background:none;color:var(--pri);padding:4px;font-weight:600;text-
 <button data-tab="nuevo" class="on">Nuevo</button>
 <button data-tab="hist">Seguimiento</button>
 <button data-tab="res">Resumen</button>
+<button data-tab="cli">Clientes</button>
 </nav>
 
 <!-- NUEVO -->
@@ -131,12 +139,14 @@ footer button{background:none;color:var(--pri);padding:4px;font-weight:600;text-
 <div><label>Nº albarán</label><input id="num" readonly value="Se asigna al guardar"></div>
 </div>
 
-<label>Náutica que hace el servicio *</label>
+<label>Tipo de cliente *</label>
+<div class="tipo"><label><input type="radio" name="tipo" value="nautica" checked> ⚓ Náutica</label><label><input type="radio" name="tipo" value="particular"> 👤 Particular</label></div>
+<label id="lbNaut">Náutica que hace el servicio *</label>
 <select id="nautSel"><option value="">— Elige la náutica —</option></select>
 <input id="naut" hidden placeholder="Escribe el nombre de la náutica nueva" autocomplete="off" style="margin-top:8px">
 <div id="bonoNaut" style="margin-top:8px"></div>
 <div class="row">
-<div><label>CIF</label><input id="cif"></div>
+<div><label id="lbCif">CIF</label><input id="cif"></div>
 <div><label>Teléfono (WhatsApp)</label><input id="tel" type="tel" inputmode="tel"></div>
 </div>
 <label>Email</label><input id="mail" type="email" inputmode="email">
@@ -182,6 +192,7 @@ footer button{background:none;color:var(--pri);padding:4px;font-weight:600;text-
 <option value="anu">Anulados</option>
 </select>
 <input type="month" id="fMes" title="Mes (vacío = todos)">
+<select id="fTipo" style="grid-column:1/-1"><option value="">Náuticas y particulares</option><option value="nautica">Solo náuticas</option><option value="particular">Solo particulares</option></select>
 </div>
 <div class="mut" id="fCount" style="margin:10px 0 0"></div>
 </div>
@@ -191,13 +202,41 @@ footer button{background:none;color:var(--pri);padding:4px;font-weight:600;text-
 <!-- RESUMEN -->
 <section id="tab-res" hidden>
 <div class="card">
-<h2>Resumen mensual por náutica</h2>
+<h2>Resumen mensual por cliente</h2>
 <label>Mes</label><input type="month" id="rMes">
 <div class="totales" id="rTot" style="margin-top:12px"></div>
 <button class="sec full" id="rCsv">⬇ Descargar mes en Excel (CSV)</button>
 </div>
 <div class="card"><div id="rList"></div></div>
 </section>
+
+<!-- CLIENTES -->
+<section id="tab-cli" hidden>
+<div class="card">
+<h2>Clientes guardados</h2>
+<p class="mut" style="margin:0 0 8px">Aquí puedes corregir el nombre o los datos de una náutica o de un particular. Si cambias el nombre, también se corrige en todos sus albaranes.</p>
+<input type="search" id="cTxt" placeholder="Buscar cliente">
+<div class="tipo" style="margin-top:8px"><label><input type="radio" name="cTipo" value="nautica" checked> ⚓ Náuticas</label><label><input type="radio" name="cTipo" value="particular"> 👤 Particulares</label></div>
+</div>
+<div class="card"><div id="cList"></div></div>
+</section>
+
+<div class="modal-fondo" id="cModal" hidden>
+<div class="modal">
+<h2 id="cmTit">Editar cliente</h2>
+<label>Tipo</label>
+<div class="tipo"><label><input type="radio" name="cmTipo" value="nautica"> ⚓ Náutica</label><label><input type="radio" name="cmTipo" value="particular"> 👤 Particular</label></div>
+<label>Nombre</label><input id="cmNom">
+<div class="row">
+<div><label id="cmLbCif">CIF</label><input id="cmCif"></div>
+<div><label>Teléfono (WhatsApp)</label><input id="cmTel" type="tel" inputmode="tel"></div>
+</div>
+<label>Email</label><input id="cmMail" type="email" inputmode="email">
+<div id="cmInfo" class="mut" style="margin-top:8px"></div>
+<button class="full" id="cmGuardar" style="margin-top:14px">Guardar cambios</button>
+<div class="row" style="margin-top:8px"><button class="sec" id="cmCancelar">Cancelar</button><button class="sec" id="cmBorrar" style="color:var(--bad);border-color:var(--bad)">🗑 Quitar de la lista</button></div>
+</div>
+</div>
 
 <footer><span id="usuario"></span> · <button id="salir">Cerrar sesión</button></footer>
 </div>
@@ -243,6 +282,8 @@ const diasEntre = (a, b) => Math.round((new Date(b + "T12:00") - new Date(a + "T
 const norm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 const slug = s => norm(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "sin-nombre";
 const euros = n => Number(n).toFixed(2).replace(".", ",") + " €";
+const tipoDe = x => (x && x.tipo === "particular") ? "particular" : "nautica";
+const tipoForm = () => (document.querySelector("input[name=tipo]:checked") || {}).value || "nautica";
 const tieneImp = a => a.imp !== "" && a.imp != null && !isNaN(Number(a.imp));
 
 let db, auth, F = {};           // Firebase
@@ -302,14 +343,14 @@ function escuchar(){
     pintarTodo();
   }, err => { console.error(err); toast("Error leyendo datos: " + (err.code === "permission-denied" ? "sin permiso (revisa las reglas de Firestore)" : err.message)); }));
   unsubs.push(F.onSnapshot(F.collection(db, "nauticas"), snap => {
-    nauts = {}; snap.docs.forEach(d => { const n = d.data(); if (n.nombre) nauts[n.nombre] = n; });
-    fillNl();
+    nauts = {}; snap.docs.forEach(d => { const n = d.data(); if (n.nombre) nauts[n.nombre] = { ...n, _id: d.id, tipo: tipoDe(n) }; });
+    fillNl(); renderCli();
   }, () => {}));
 }
 function pararEscucha(){ unsubs.forEach(u => { try { u(); } catch (e) {} }); unsubs = []; }
 function setCon(){ const on = navigator.onLine; $("punto").classList.toggle("off", !on); if (!on) $("contxt").textContent = "Sin conexión · los cambios se subirán solos"; }
 
-function pintarTodo(){ renderHist(); renderRes(); renderAvisos(); mostrarBonoNaut(); }
+function pintarTodo(){ renderHist(); renderRes(); renderAvisos(); mostrarBonoNaut(); renderCli(); }
 
 /* ---------------- numeración única (transacción) ---------------- */
 async function crearEnFirestore(a){
@@ -348,13 +389,26 @@ function resetForm(){
   document.querySelectorAll("input[name=sv]").forEach(r => r.checked = false);
   $("fin").value = ""; $("finw").hidden = true; $("bonoNaut").innerHTML = "";
   $("nautSel").value = ""; $("naut").hidden = true;
+  document.querySelector("input[name=tipo][value=nautica]").checked = true; aplicarTipo();
 }
 function fillNl(){
   const sel = $("nautSel"), actual = sel.value;
-  const nombres = Object.keys(nauts).sort((a, b) => a.localeCompare(b, "es"));
-  sel.innerHTML = '<option value="">— Elige la náutica —</option>' + nombres.map(n => '<option value="' + esc(n) + '">' + esc(n) + '</option>').join("") + '<option value="__nueva">➕ Náutica nueva…</option>';
-  if (actual && (actual === "__nueva" || nauts[actual])) sel.value = actual;
+  const t = tipoForm(), part = t === "particular";
+  const nombres = Object.keys(nauts).filter(n => nauts[n].tipo === t).sort((a, b) => a.localeCompare(b, "es"));
+  sel.innerHTML = '<option value="">' + (part ? '— Elige el cliente —' : '— Elige la náutica —') + '</option>' + nombres.map(n => '<option value="' + esc(n) + '">' + esc(n) + '</option>').join("") + '<option value="__nueva">' + (part ? '➕ Cliente particular nuevo…' : '➕ Náutica nueva…') + '</option>';
+  if (actual && (actual === "__nueva" || (nauts[actual] && nauts[actual].tipo === t))) sel.value = actual;
 }
+function aplicarTipo(){
+  const part = tipoForm() === "particular";
+  $("lbNaut").textContent = part ? "Nombre y apellidos del cliente *" : "Náutica que hace el servicio *";
+  $("lbCif").textContent = part ? "DNI / NIF" : "CIF";
+  $("naut").placeholder = part ? "Escribe nombre y apellidos" : "Escribe el nombre de la náutica nueva";
+  fillNl();
+}
+document.querySelectorAll("input[name=tipo]").forEach(r => r.addEventListener("change", () => {
+  $("nautSel").value = ""; $("naut").hidden = true; $("naut").value = ""; ["cif","tel","mail"].forEach(i => $(i).value = "");
+  aplicarTipo(); mostrarBonoNaut();
+}));
 $("nautSel").addEventListener("change", function(){
   const v = this.value;
   if (v === "__nueva") {
@@ -373,16 +427,16 @@ $("svc").addEventListener("change", updFin); $("fecha").addEventListener("change
 let ultimoGuardado = null, ultimoNum = null;
 $("save").addEventListener("click", async () => {
   const sel = document.querySelector("input[name=sv]:checked");
-  const a = { id: "a" + Date.now() + Math.random().toString(36).slice(2, 6), fecha: $("fecha").value, naut: $("naut").value.trim(), cif: $("cif").value.trim(), tel: $("tel").value.trim(), mail: $("mail").value.trim(), emb: $("emb").value.trim(), mat: $("mat").value.trim(), serv: sel ? sel.value : "", fin: (sel && sel.value === BONO) ? $("fin").value : "", imp: $("imp").value, resp: $("resp").value.trim(), obs: $("obs").value.trim(), estado: { enviado: false, pagado: false, facturado: false }, anulado: false };
+  const a = { id: "a" + Date.now() + Math.random().toString(36).slice(2, 6), tipo: tipoForm(), fecha: $("fecha").value, naut: $("naut").value.trim(), cif: $("cif").value.trim(), tel: $("tel").value.trim(), mail: $("mail").value.trim(), emb: $("emb").value.trim(), mat: $("mat").value.trim(), serv: sel ? sel.value : "", fin: (sel && sel.value === BONO) ? $("fin").value : "", imp: $("imp").value, resp: $("resp").value.trim(), obs: $("obs").value.trim(), estado: { enviado: false, pagado: false, facturado: false }, anulado: false };
   if (!a.fecha) return toast("Falta la fecha");
-  if (!a.naut) return toast($("nautSel").value === "__nueva" ? "Escribe el nombre de la náutica nueva" : "Elige la náutica");
-  const yaExiste = Object.keys(nauts).find(n => norm(n) === norm(a.naut)); if (yaExiste) a.naut = yaExiste;
+  if (!a.naut) return toast(a.tipo === "particular" ? ($("nautSel").value === "__nueva" ? "Escribe el nombre del cliente" : "Elige el cliente") : ($("nautSel").value === "__nueva" ? "Escribe el nombre de la náutica nueva" : "Elige la náutica"));
+  const yaExiste = Object.keys(nauts).find(n => norm(n) === norm(a.naut) && nauts[n].tipo === a.tipo); if (yaExiste) a.naut = yaExiste;
   if (!a.emb) return toast("Falta la embarcación");
   if (!a.serv) return toast("Elige el servicio");
   if (a.serv === BONO && !a.fin) return toast("Falta la fecha de fin del bono");
   sv("resp", a.resp);
   // ficha de la náutica (se sincroniza aunque no haya conexión)
-  try { F.setDoc(F.doc(db, "nauticas", slug(a.naut)), { nombre: a.naut, cif: a.cif, tel: a.tel, mail: a.mail }, { merge: true }).catch(() => {}); } catch (e) {}
+  try { F.setDoc(F.doc(db, "nauticas", (nauts[a.naut] && nauts[a.naut]._id) || (a.tipo === "particular" ? "p-" : "") + slug(a.naut)), { nombre: a.naut, tipo: a.tipo, cif: a.cif, tel: a.tel, mail: a.mail }, { merge: true }).catch(() => {}); } catch (e) {}
   $("save").disabled = true; $("save").textContent = "Guardando…";
   ultimoGuardado = a.id; ultimoNum = null;
   let num = null;
@@ -414,9 +468,10 @@ function pdfBlob(a){
   if (a.anulado) { d.setTextColor(180,35,24); d.setFont("helvetica","bold"); d.text("ANULADO", W-m, 42, { align: "right" }); d.setTextColor(0); }
   d.setDrawColor(11,79,138); d.setLineWidth(.6); d.line(m, 55, W-m, 55);
   const box = (y, h, t) => { d.setLineWidth(.3); d.setDrawColor(150); d.rect(m, y, W-2*m, h); d.setFont("helvetica","bold"); d.setFontSize(9); d.setTextColor(90); d.text(t, m+3, y+5); d.setTextColor(0); };
-  box(60, 30, "NÁUTICA"); d.setFont("helvetica","bold"); d.setFontSize(12); d.text(a.naut, m+3, 70);
+  const part = tipoDe(a) === "particular";
+  box(60, 30, part ? "CLIENTE" : "NÁUTICA"); d.setFont("helvetica","bold"); d.setFontSize(12); d.text(a.naut, m+3, 70);
   d.setFont("helvetica","normal"); d.setFontSize(10);
-  d.text("CIF: " + (a.cif || "-") + "     Tel.: " + (a.tel || "-"), m+3, 77); d.text("Email: " + (a.mail || "-"), m+3, 83);
+  d.text((part ? "DNI/NIF: " : "CIF: ") + (a.cif || "-") + "     Tel.: " + (a.tel || "-"), m+3, 77); d.text("Email: " + (a.mail || "-"), m+3, 83);
   box(95, 22, "EMBARCACIÓN"); d.setFontSize(12); d.text(a.emb, m+3, 105); d.setFontSize(10); d.text("Matrícula / folio: " + (a.mat || "-"), m+3, 111);
   box(122, 40, "SERVICIO"); d.setFontSize(11);
   SERV.forEach((s, i) => { const x = m+4+(i%2)*85, y = 132+Math.floor(i/2)*11; d.setLineWidth(.4); d.setDrawColor(0); d.rect(x, y-4, 5, 5); if (a.serv === s) { d.setFont("helvetica","bold"); d.text("X", x+1.1, y); } d.setFont("helvetica", a.serv === s ? "bold" : "normal"); d.text(s, x+8, y); });
@@ -427,12 +482,12 @@ function pdfBlob(a){
   if (a.obs) { d.setFont("helvetica","bold"); d.text("Observaciones:", m, y); d.setFont("helvetica","normal"); d.text(d.splitTextToSize(a.obs, W-2*m), m, y+5); }
   d.setLineWidth(.3); d.setDrawColor(150);
   d.rect(m, 225, 85, 35); d.rect(W-m-85, 225, 85, 35);
-  d.setFontSize(9); d.setTextColor(90); d.text("Firma y sello del Puerto" + (a.resp ? " (" + a.resp + ")" : ""), m+3, 230); d.text("Conforme náutica", W-m-82, 230);
+  d.setFontSize(9); d.setTextColor(90); d.text("Firma y sello del Puerto" + (a.resp ? " (" + a.resp + ")" : ""), m+3, 230); d.text(part ? "Conforme cliente" : "Conforme náutica", W-m-82, 230);
   d.setFontSize(8); d.text("Documento generado por CN Águilas · " + EMP.l[4], W/2, 285, { align: "center" });
   return d.output("blob");
 }
 const fname = a => "Albaran-" + a.num + "-" + a.naut.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9]+/g, "_").slice(0, 30) + ".pdf";
-const msg = a => "Albarán nº " + a.num + " · Puerto Deportivo C.N. Águilas\nFecha: " + fdate(a.fecha) + "\nNáutica: " + a.naut + "\nEmbarcación: " + a.emb + (a.mat ? " (" + a.mat + ")" : "") + "\nServicio: " + a.serv + (a.fin ? " (válido hasta " + fdate(a.fin) + ")" : "") + (tieneImp(a) ? "\nImporte: " + euros(a.imp) : "");
+const msg = a => "Albarán nº " + a.num + " · Puerto Deportivo C.N. Águilas\nFecha: " + fdate(a.fecha) + (tipoDe(a) === "particular" ? "\nCliente: " : "\nNáutica: ") + a.naut + "\nEmbarcación: " + a.emb + (a.mat ? " (" + a.mat + ")" : "") + "\nServicio: " + a.serv + (a.fin ? " (válido hasta " + fdate(a.fin) + ")" : "") + (tieneImp(a) ? "\nImporte: " + euros(a.imp) : "");
 const find = num => albs.find(a => a.num === num);
 
 function descargar(blob, nombre){
@@ -507,8 +562,9 @@ function showRes(a){
 }
 let limiteHist = 50;
 function filtrados(){
-  const t = norm($("fTxt").value), e = $("fEst").value, m = $("fMes").value;
+  const t = norm($("fTxt").value), e = $("fEst").value, m = $("fMes").value, tp = $("fTipo").value;
   return albs.filter(a => {
+    if (tp && tipoDe(a) !== tp) return false;
     if (m && a.fecha.slice(0, 7) !== m) return false;
     if (t && !norm([a.num, a.naut, a.emb, a.mat].join(" ")).includes(t)) return false;
     const s = a.estado || {};
@@ -525,14 +581,14 @@ function renderHist(){
   const h = $("hist"), lista = filtrados();
   let html = pend.map(p => '<div class="item"><b>Pendiente de número · ' + esc(p.naut) + '</b><span class="sub">' + fdate(p.fecha) + ' · ' + esc(p.emb) + ' · ' + esc(p.serv) + '</span><div class="chips"><span class="chip pend">⏳ Se subirá al tener conexión</span></div></div>').join("");
   html += lista.slice(0, limiteHist).map(a =>
-    '<div class="item' + (a.anulado ? " anulado" : "") + '"><b>' + esc(a.num) + ' · ' + esc(a.naut) + '</b><span class="sub">' + fdate(a.fecha) + ' · ' + esc(a.emb) + (a.mat ? " (" + esc(a.mat) + ")" : "") + ' · ' + esc(a.serv) + (a.fin ? " hasta " + fdate(a.fin) : "") + (tieneImp(a) ? " · " + euros(a.imp) : "") + '</span>' +
+    '<div class="item' + (a.anulado ? " anulado" : "") + '"><b>' + esc(a.num) + ' · ' + esc(a.naut) + (tipoDe(a) === "particular" ? '<span class="etq">Particular</span>' : '') + '</b><span class="sub">' + fdate(a.fecha) + ' · ' + esc(a.emb) + (a.mat ? " (" + esc(a.mat) + ")" : "") + ' · ' + esc(a.serv) + (a.fin ? " hasta " + fdate(a.fin) : "") + (tieneImp(a) ? " · " + euros(a.imp) : "") + '</span>' +
     chipsHtml(a) + (a.anulado ? "" : '<div class="acts">' + actsHtml(a.num, true) + '</div>') +
     '<div style="display:flex;gap:8px;margin-top:8px"><button class="sec sm" data-a="anu" data-num="' + esc(a.num) + '">' + (a.anulado ? "Recuperar" : "Anular") + '</button><button class="sec sm" style="color:var(--bad);border-color:var(--bad)" data-a="del" data-num="' + esc(a.num) + '">🗑 Eliminar</button></div></div>').join("");
   h.innerHTML = html || '<span class="mut">No hay albaranes con estos filtros.</span>';
   $("masHist").hidden = lista.length <= limiteHist;
   $("fCount").textContent = lista.length + (lista.length === 1 ? " albarán" : " albaranes") + (pend.length ? " · " + pend.length + " pendiente(s) de subir" : "");
 }
-["fTxt","fEst","fMes"].forEach(i => $(i).addEventListener("input", () => { limiteHist = 50; renderHist(); }));
+["fTxt","fEst","fMes","fTipo"].forEach(i => $(i).addEventListener("input", () => { limiteHist = 50; renderHist(); }));
 $("masHist").addEventListener("click", () => { limiteHist += 50; renderHist(); });
 
 document.addEventListener("click", e => {
@@ -552,14 +608,14 @@ document.addEventListener("click", e => {
 });
 
 /* ---------------- pestañas ---------------- */
-function irTab(n){ document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === n)); ["nuevo","hist","res"].forEach(x => $("tab-" + x).hidden = x !== n); window.scrollTo({ top: 0 }); }
+function irTab(n){ document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === n)); ["nuevo","hist","res","cli"].forEach(x => $("tab-" + x).hidden = x !== n); window.scrollTo({ top: 0 }); }
 document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => irTab(b.dataset.tab)));
 
 /* ---------------- resumen mensual ---------------- */
 function datosMes(ym){
   const g = {};
   albs.filter(a => !a.anulado && a.fecha.slice(0, 7) === ym).forEach(a => {
-    const k = a.naut; if (!g[k]) g[k] = { naut: k, serv: {}, imp: 0, n: 0, sinFac: 0, sinPag: 0, nums: [] };
+    const k = a.naut; if (!g[k]) g[k] = { naut: k, tipo: tipoDe(a), serv: {}, imp: 0, n: 0, sinFac: 0, sinPag: 0, nums: [] };
     g[k].serv[a.serv] = (g[k].serv[a.serv] || 0) + 1; g[k].n++; g[k].nums.push(a.num);
     if (tieneImp(a)) g[k].imp += Number(a.imp);
     const s = a.estado || {}; if (!s.facturado) g[k].sinFac++; if (!s.pagado) g[k].sinPag++;
@@ -570,9 +626,9 @@ function textoNaut(r, ym){ return r.naut + " – " + mesTxt(ym) + "\n" + SERV.fi
 function renderRes(){
   const ym = $("rMes").value; if (!ym) return;
   const rs = datosMes(ym), tot = rs.reduce((t, r) => ({ n: t.n + r.n, imp: t.imp + r.imp, sf: t.sf + r.sinFac }), { n: 0, imp: 0, sf: 0 });
-  $("rTot").innerHTML = '<div><b>' + tot.n + '</b><span>albaranes</span></div><div><b>' + rs.length + '</b><span>náuticas</span></div><div><b>' + tot.sf + '</b><span>sin facturar</span></div>';
+  $("rTot").innerHTML = '<div><b>' + tot.n + '</b><span>albaranes</span></div><div><b>' + rs.length + '</b><span>clientes</span></div><div><b>' + tot.sf + '</b><span>sin facturar</span></div>';
   $("rList").innerHTML = rs.length ? rs.map(r =>
-    '<div class="resumen-naut"><h3>' + esc(r.naut) + '</h3><div class="lineas">' + SERV.filter(s => r.serv[s]).map(s => '<div><span>' + esc(s) + '</span><b>' + r.serv[s] + '</b></div>').join("") + (r.imp ? '<div><span>Importe total</span><b>' + euros(r.imp) + '</b></div>' : '') + '</div>' +
+    '<div class="resumen-naut"><h3>' + esc(r.naut) + (r.tipo === "particular" ? '<span class="etq">Particular</span>' : '') + '</h3><div class="lineas">' + SERV.filter(s => r.serv[s]).map(s => '<div><span>' + esc(s) + '</span><b>' + r.serv[s] + '</b></div>').join("") + (r.imp ? '<div><span>Importe total</span><b>' + euros(r.imp) + '</b></div>' : '') + '</div>' +
     '<div class="mut">' + r.n + (r.n === 1 ? ' albarán' : ' albaranes') + ' · ' + (r.sinFac ? r.sinFac + ' sin facturar' : '✓ todo facturado') + ' · ' + (r.sinPag ? r.sinPag + ' sin pagar' : '✓ todo pagado') + '</div>' +
     '<div class="acts"><button class="sm sec" data-a="verNaut" data-naut="' + esc(r.naut) + '">Ver albaranes</button><button class="sm sec" data-a="copNaut" data-naut="' + esc(r.naut) + '">Copiar resumen</button>' + (r.sinFac ? '<button class="sm" data-a="facNaut" data-naut="' + esc(r.naut) + '">Marcar facturado</button>' : '<span></span>') + '</div></div>'
   ).join("") : '<span class="mut">No hay albaranes en ' + esc(mesTxt(ym)) + '.</span>';
@@ -593,9 +649,73 @@ async function copiarNaut(naut){
 $("rCsv").addEventListener("click", () => {
   const ym = $("rMes").value; if (!ym) return;
   const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-  const filas = [["Nº","Fecha","Náutica","CIF","Embarcación","Matrícula","Servicio","Bono hasta","Importe","Atendido por","Enviado","Pagado","Facturado","Anulado","Observaciones"]]
-    .concat(albs.filter(a => a.fecha.slice(0, 7) === ym).slice().reverse().map(a => { const s = a.estado || {}; return [a.num, fdate(a.fecha), a.naut, a.cif, a.emb, a.mat, a.serv, fdate(a.fin), tieneImp(a) ? Number(a.imp).toFixed(2).replace(".", ",") : "", a.resp, s.enviado ? "Sí" : "No", s.pagado ? "Sí" : "No", s.facturado ? "Sí" : "No", a.anulado ? "Sí" : "No", a.obs]; }));
+  const filas = [["Nº","Fecha","Tipo","Cliente","CIF / DNI","Embarcación","Matrícula","Servicio","Bono hasta","Importe","Atendido por","Enviado","Pagado","Facturado","Anulado","Observaciones"]]
+    .concat(albs.filter(a => a.fecha.slice(0, 7) === ym).slice().reverse().map(a => { const s = a.estado || {}; return [a.num, fdate(a.fecha), tipoDe(a) === "particular" ? "Particular" : "Náutica", a.naut, a.cif, a.emb, a.mat, a.serv, fdate(a.fin), tieneImp(a) ? Number(a.imp).toFixed(2).replace(".", ",") : "", a.resp, s.enviado ? "Sí" : "No", s.pagado ? "Sí" : "No", s.facturado ? "Sí" : "No", a.anulado ? "Sí" : "No", a.obs]; }));
   descargar(new Blob(["﻿" + filas.map(f => f.map(q).join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" }), "albaranes_rampa_" + ym + ".csv");
+});
+
+/* ---------------- clientes (corregir nombres y datos) ---------------- */
+function listaClientes(){
+  const m = {};
+  Object.values(nauts).forEach(n => { m[n.tipo + "|" + n.nombre] = { nombre: n.nombre, tipo: n.tipo, cif: n.cif || "", tel: n.tel || "", mail: n.mail || "", _id: n._id }; });
+  albs.forEach(a => { const k = tipoDe(a) + "|" + a.naut; if (!m[k]) m[k] = { nombre: a.naut, tipo: tipoDe(a), cif: a.cif || "", tel: a.tel || "", mail: a.mail || "", _id: null }; });
+  Object.values(m).forEach(c => c.n = albs.filter(a => a.naut === c.nombre && tipoDe(a) === c.tipo).length);
+  return Object.values(m).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+}
+function renderCli(){
+  if (!$("cList")) return;
+  const t = (document.querySelector("input[name=cTipo]:checked") || {}).value || "nautica", q = norm($("cTxt").value);
+  const l = listaClientes().filter(c => c.tipo === t && (!q || norm(c.nombre + " " + c.cif).includes(q)));
+  $("cList").innerHTML = l.length ? l.map(c => '<div class="item" style="display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><b>' + esc(c.nombre) + '</b><span class="sub">' + [c.cif, c.tel, c.mail].filter(Boolean).map(esc).join(" · ") + (c.cif || c.tel || c.mail ? "<br>" : "") + c.n + (c.n === 1 ? " albarán" : " albaranes") + '</span></div><button class="sm sec" data-cli="' + esc(t + "|" + c.nombre) + '">✏️ Editar</button></div>').join("")
+    : '<span class="mut">' + (t === "particular" ? "No hay particulares guardados." : "No hay náuticas guardadas.") + '</span>';
+}
+$("cTxt").addEventListener("input", renderCli);
+document.querySelectorAll("input[name=cTipo]").forEach(r => r.addEventListener("change", renderCli));
+
+let editando = null;
+function cmTipo(){ return (document.querySelector("input[name=cmTipo]:checked") || {}).value || "nautica"; }
+document.querySelectorAll("input[name=cmTipo]").forEach(r => r.addEventListener("change", () => { $("cmLbCif").textContent = cmTipo() === "particular" ? "DNI / NIF" : "CIF"; }));
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-cli]"); if (!b) return;
+  const k = b.dataset.cli, c = listaClientes().find(x => x.tipo + "|" + x.nombre === k); if (!c) return;
+  editando = c;
+  $("cmTit").textContent = "Editar: " + c.nombre;
+  document.querySelector("input[name=cmTipo][value=" + c.tipo + "]").checked = true;
+  $("cmLbCif").textContent = c.tipo === "particular" ? "DNI / NIF" : "CIF";
+  $("cmNom").value = c.nombre; $("cmCif").value = c.cif; $("cmTel").value = c.tel; $("cmMail").value = c.mail;
+  $("cmInfo").textContent = c.n ? "Tiene " + c.n + (c.n === 1 ? " albarán. Si cambias el nombre o el tipo, también se corregirá en él." : " albaranes. Si cambias el nombre o el tipo, también se corregirá en todos.") : "";
+  $("cModal").hidden = false;
+});
+$("cmCancelar").addEventListener("click", () => { $("cModal").hidden = true; editando = null; });
+$("cmGuardar").addEventListener("click", async () => {
+  const c = editando; if (!c) return;
+  const nombre = $("cmNom").value.trim(), tipo = cmTipo();
+  if (!nombre) return toast("El nombre no puede quedar vacío");
+  const datos = { nombre, tipo, cif: $("cmCif").value.trim(), tel: $("cmTel").value.trim(), mail: $("cmMail").value.trim() };
+  const cambiaNombre = nombre !== c.nombre || tipo !== c.tipo;
+  const otro = Object.values(nauts).find(n => n.nombre !== c.nombre && norm(n.nombre) === norm(nombre) && n.tipo === tipo);
+  if (otro && !confirm("Ya existe «" + otro.nombre + "». ¿Quieres unir los dos en uno solo? Sus albaranes quedarán todos bajo ese nombre.")) return;
+  if (otro) datos.nombre = otro.nombre;
+  const afectados = cambiaNombre ? albs.filter(a => a.naut === c.nombre && tipoDe(a) === c.tipo) : [];
+  $("cmGuardar").disabled = true; $("cmGuardar").textContent = "Guardando…";
+  try {
+    const nuevoId = otro ? otro._id : (cambiaNombre || !c._id) ? (tipo === "particular" ? "p-" : "") + slug(datos.nombre) : c._id;
+    // los lotes de Firestore admiten 500 operaciones: se trocea por si hay muchos albaranes
+    const ops = [b => b.set(F.doc(db, "nauticas", nuevoId), datos, { merge: true })];
+    if (c._id && c._id !== nuevoId) ops.push(b => b.delete(F.doc(db, "nauticas", c._id)));
+    afectados.forEach(a => ops.push(b => b.update(F.doc(db, "albaranes", a.num), { naut: datos.nombre, tipo })));
+    for (let i = 0; i < ops.length; i += 450) { const b = F.writeBatch(db); ops.slice(i, i + 450).forEach(f => f(b)); await b.commit(); }
+    $("cModal").hidden = true; editando = null;
+    toast(afectados.length ? "Guardado. Corregido también en " + afectados.length + (afectados.length === 1 ? " albarán." : " albaranes.") : "Datos guardados");
+  } catch (e) { toast("No se pudo guardar: " + e.message); }
+  $("cmGuardar").disabled = false; $("cmGuardar").textContent = "Guardar cambios";
+});
+$("cmBorrar").addEventListener("click", async () => {
+  const c = editando; if (!c) return;
+  if (!c._id) { toast("Este cliente solo aparece en albaranes antiguos; no está en la lista del desplegable."); return; }
+  if (!confirm("¿Quitar «" + c.nombre + "» de la lista de clientes?\n\nDejará de salir en el desplegable. Sus albaranes NO se borran.")) return;
+  try { await F.deleteDoc(F.doc(db, "nauticas", c._id)); $("cModal").hidden = true; editando = null; toast("Quitado de la lista"); }
+  catch (e) { toast("No se pudo quitar: " + e.message); }
 });
 
 /* ---------------- avisos de bono ---------------- */
