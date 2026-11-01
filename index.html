@@ -53,6 +53,21 @@ button.sm{padding:9px 10px;font-size:14px}
 .tipo label{margin:0;color:var(--tx);font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--bd);border-radius:10px;padding:11px;background:var(--bg)}
 .tipo input{width:auto;margin:0;accent-color:var(--pri)}
 .tipo label:has(input:checked){border-color:var(--pri);background:color-mix(in srgb,var(--pri) 14%,var(--bg));color:var(--pri)}
+.cli-res{display:grid;gap:6px;margin-top:8px}
+.cli-res button{display:block;width:100%;text-align:left;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;font-weight:400}
+.cli-res button b{display:block;font-weight:700}
+.cli-res button span{font-size:13px;color:var(--mut)}
+.cli-res button.nuevo{color:var(--pri);font-weight:700;border-style:dashed}
+.cli-res .tit{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.cli-sel{display:flex;align-items:center;gap:10px;border:1px solid var(--pri);background:color-mix(in srgb,var(--pri) 10%,var(--card));border-radius:10px;padding:10px 12px}
+.cli-sel>div{flex:1;min-width:0}
+.cli-sel b{display:block}
+.hoy-item{display:flex;gap:10px;align-items:flex-start;border-top:1px solid var(--bd);padding:10px 0}
+.hoy-item:first-child{border-top:0}
+.hoy-tag{flex:none;font-size:12px;font-weight:700;border-radius:8px;padding:4px 8px;color:#fff;background:var(--ok);text-align:center;min-width:84px}
+.hoy-tag.bono{background:var(--pri);color:var(--pri-tx)}
+.hoy-item .info{flex:1;min-width:0}
+.hoy-item .info b{display:block}
 .etq{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:2px 7px;border-radius:6px;background:var(--bg);border:1px solid var(--bd);color:var(--mut);vertical-align:middle;margin-left:6px}
 .modal-fondo{position:fixed;inset:0;background:rgba(10,20,35,.55);z-index:15;display:flex;align-items:center;justify-content:center;padding:16px}
 .modal{background:var(--card);border-radius:14px;padding:16px;max-width:480px;width:100%;max-height:92vh;overflow:auto}
@@ -143,6 +158,10 @@ footer button{background:none;color:var(--pri);padding:4px;font-weight:600;text-
 <div class="tipo"><label><input type="radio" name="tipo" value="nautica" checked> ⚓ Náutica</label><label><input type="radio" name="tipo" value="particular"> 👤 Particular</label></div>
 <label id="lbNaut">Náutica que hace el servicio *</label>
 <select id="nautSel"><option value="">— Elige la náutica —</option></select>
+<div id="cliBox" hidden>
+<div id="cliSel" class="cli-sel" hidden><div><b id="cliSelNom"></b><span id="cliSelSub" class="mut"></span></div><button type="button" class="sm sec" id="cliCambiar">Cambiar</button></div>
+<div id="cliBuscarW"><input type="search" id="cliBuscar" placeholder="🔍 Buscar por nombre, DNI, barco o matrícula" autocomplete="off"><div id="cliRes" class="cli-res"></div></div>
+</div>
 <input id="naut" hidden placeholder="Escribe el nombre de la náutica nueva" autocomplete="off" style="margin-top:8px">
 <div id="bonoNaut" style="margin-top:8px"></div>
 <div class="row">
@@ -179,6 +198,10 @@ footer button{background:none;color:var(--pri);padding:4px;font-weight:600;text-
 
 <!-- SEGUIMIENTO -->
 <section id="tab-hist" hidden>
+<div class="card ok" id="hoyCard" hidden>
+<h2 id="hoyTit">Válidos hoy</h2>
+<div id="hoyList"></div>
+</div>
 <div class="card">
 <h2>Seguimiento de albaranes</h2>
 <div class="filtros">
@@ -215,7 +238,7 @@ footer button{background:none;color:var(--pri);padding:4px;font-weight:600;text-
 <div class="card">
 <h2>Clientes guardados</h2>
 <p class="mut" style="margin:0 0 8px">Aquí puedes corregir el nombre o los datos de una náutica o de un particular. Si cambias el nombre, también se corrige en todos sus albaranes.</p>
-<input type="search" id="cTxt" placeholder="Buscar cliente">
+<input type="search" id="cTxt" placeholder="Buscar por nombre, DNI, barco o matrícula">
 <div class="tipo" style="margin-top:8px"><label><input type="radio" name="cTipo" value="nautica" checked> ⚓ Náuticas</label><label><input type="radio" name="cTipo" value="particular"> 👤 Particulares</label></div>
 </div>
 <div class="card"><div id="cList"></div></div>
@@ -232,9 +255,28 @@ footer button{background:none;color:var(--pri);padding:4px;font-weight:600;text-
 <div><label>Teléfono (WhatsApp)</label><input id="cmTel" type="tel" inputmode="tel"></div>
 </div>
 <label>Email</label><input id="cmMail" type="email" inputmode="email">
+<div id="cmBarco" hidden>
+<label>Embarcación habitual</label>
+<div class="row"><input id="cmEmb" placeholder="Nombre / modelo"><input id="cmMat" placeholder="Matrícula / folio"></div>
+<div class="mut" style="font-size:13px;margin-top:4px">Si cambia de barco, cámbialo aquí: los albaranes antiguos conservan el barco que tenían.</div>
+</div>
 <div id="cmInfo" class="mut" style="margin-top:8px"></div>
 <button class="full" id="cmGuardar" style="margin-top:14px">Guardar cambios</button>
 <div class="row" style="margin-top:8px"><button class="sec" id="cmCancelar">Cancelar</button><button class="sec" id="cmBorrar" style="color:var(--bad);border-color:var(--bad)">🗑 Quitar de la lista</button></div>
+</div>
+</div>
+
+<div class="modal-fondo" id="aModal" hidden>
+<div class="modal" style="max-width:600px">
+<div style="display:flex;align-items:center;gap:10px"><h2 id="amTit" style="flex:1;margin:0">Albaranes</h2><button class="sm sec" id="amCerrar">Cerrar</button></div>
+<div class="row" style="margin-top:6px">
+<div><label>Año</label><select id="amAnio"></select></div>
+<div><label>Mes</label><select id="amMes"><option value="">Todos</option></select></div>
+<div style="grid-column:1/-1"><label>Día concreto (opcional)</label><input type="date" id="amDia"></div>
+</div>
+<div class="totales" id="amTot" style="margin-top:12px"></div>
+<div id="amServ" class="lineas"></div>
+<div id="amList" style="margin-top:6px"></div>
 </div>
 </div>
 
@@ -344,13 +386,13 @@ function escuchar(){
   }, err => { console.error(err); toast("Error leyendo datos: " + (err.code === "permission-denied" ? "sin permiso (revisa las reglas de Firestore)" : err.message)); }));
   unsubs.push(F.onSnapshot(F.collection(db, "nauticas"), snap => {
     nauts = {}; snap.docs.forEach(d => { const n = d.data(); if (n.nombre) nauts[n.nombre] = { ...n, _id: d.id, tipo: tipoDe(n) }; });
-    fillNl(); renderCli();
+    fillNl(); renderCli(); if (tipoForm() === "particular" && !$("cliBuscarW").hidden) buscarClientes();
   }, () => {}));
 }
 function pararEscucha(){ unsubs.forEach(u => { try { u(); } catch (e) {} }); unsubs = []; }
 function setCon(){ const on = navigator.onLine; $("punto").classList.toggle("off", !on); if (!on) $("contxt").textContent = "Sin conexión · los cambios se subirán solos"; }
 
-function pintarTodo(){ renderHist(); renderRes(); renderAvisos(); mostrarBonoNaut(); renderCli(); }
+function pintarTodo(){ renderHoy(); renderHist(); renderRes(); renderAvisos(); mostrarBonoNaut(); renderCli(); if (!$("aModal").hidden) renderAlbCli(); if (tipoForm() === "particular" && !$("cliBuscarW").hidden) buscarClientes(); }
 
 /* ---------------- numeración única (transacción) ---------------- */
 async function crearEnFirestore(a){
@@ -389,7 +431,7 @@ function resetForm(){
   document.querySelectorAll("input[name=sv]").forEach(r => r.checked = false);
   $("fin").value = ""; $("finw").hidden = true; $("bonoNaut").innerHTML = "";
   $("nautSel").value = ""; $("naut").hidden = true;
-  document.querySelector("input[name=tipo][value=nautica]").checked = true; aplicarTipo();
+  document.querySelector("input[name=tipo][value=nautica]").checked = true; quitarCliente(); aplicarTipo();
 }
 function fillNl(){
   const sel = $("nautSel"), actual = sel.value;
@@ -402,12 +444,13 @@ function aplicarTipo(){
   const part = tipoForm() === "particular";
   $("lbNaut").textContent = part ? "Nombre y apellidos del cliente *" : "Náutica que hace el servicio *";
   $("lbCif").textContent = part ? "DNI / NIF" : "CIF";
-  $("naut").placeholder = part ? "Escribe nombre y apellidos" : "Escribe el nombre de la náutica nueva";
-  fillNl();
+  $("naut").placeholder = part ? "Escribe nombre y apellidos del cliente nuevo" : "Escribe el nombre de la náutica nueva";
+  $("nautSel").hidden = part; $("cliBox").hidden = !part;
+  fillNl(); if (part) buscarClientes();
 }
 document.querySelectorAll("input[name=tipo]").forEach(r => r.addEventListener("change", () => {
-  $("nautSel").value = ""; $("naut").hidden = true; $("naut").value = ""; ["cif","tel","mail"].forEach(i => $(i).value = "");
-  aplicarTipo(); mostrarBonoNaut();
+  $("nautSel").value = ""; $("naut").hidden = true; $("naut").value = ""; ["cif","tel","mail","emb","mat"].forEach(i => $(i).value = "");
+  quitarCliente(); aplicarTipo(); mostrarBonoNaut();
 }));
 $("nautSel").addEventListener("change", function(){
   const v = this.value;
@@ -420,6 +463,56 @@ $("nautSel").addEventListener("change", function(){
   mostrarBonoNaut();
 });
 $("naut").addEventListener("input", mostrarBonoNaut);
+
+/* ---- buscador de clientes particulares ---- */
+function barcosDe(nombre){
+  const set = new Map();
+  albs.filter(a => a.naut === nombre && tipoDe(a) === "particular").forEach(a => { const k = norm(a.emb) + "|" + norm(a.mat); if ((a.emb || a.mat) && !set.has(k)) set.set(k, { emb: a.emb, mat: a.mat }); });
+  return [...set.values()];
+}
+function ultimaFecha(nombre){ let f = ""; albs.forEach(a => { if (a.naut === nombre && tipoDe(a) === "particular" && a.fecha > f) f = a.fecha; }); return f; }
+function particulares(){ return Object.values(nauts).filter(n => n.tipo === "particular"); }
+function buscarClientes(){
+  const q = norm($("cliBuscar").value), res = $("cliRes");
+  let lista = particulares().map(c => ({ c, txt: norm([c.nombre, c.cif, c.emb, c.mat, c.tel].concat(barcosDe(c.nombre).flatMap(b => [b.emb, b.mat])).join(" ")), f: ultimaFecha(c.nombre) }));
+  let titulo = "";
+  if (q) { const palabras = q.split(/\s+/); lista = lista.filter(x => palabras.every(w => x.txt.includes(w))); lista.sort((a, b) => a.c.nombre.localeCompare(b.c.nombre, "es")); }
+  else { lista.sort((a, b) => b.f.localeCompare(a.f) || a.c.nombre.localeCompare(b.c.nombre, "es")); titulo = lista.length ? "Últimos clientes" : ""; }
+  const total = lista.length; lista = lista.slice(0, 8);
+  res.innerHTML = (titulo ? '<div class="tit">' + titulo + '</div>' : '') +
+    lista.map(x => '<button type="button" data-elegir="' + esc(x.c.nombre) + '"><b>' + esc(x.c.nombre) + '</b><span>' + [x.c.emb && ("⛵ " + x.c.emb), x.c.mat, x.c.cif].filter(Boolean).map(esc).join(" · ") + '</span></button>').join("") +
+    (q && !total ? '<div class="mut">Ningún cliente coincide con «' + esc($("cliBuscar").value) + '».</div>' : '') +
+    (total > 8 ? '<div class="mut">Hay ' + total + ' resultados: escribe más para afinar.</div>' : '') +
+    '<button type="button" class="nuevo" data-elegir="__nuevo">➕ ' + (q && !total ? 'Crear «' + esc($("cliBuscar").value) + '» como cliente nuevo' : 'Cliente particular nuevo') + '</button>';
+}
+$("cliBuscar").addEventListener("input", buscarClientes);
+function elegirCliente(nombre){
+  const c = nauts[nombre] || {};
+  $("naut").value = nombre; $("naut").hidden = true;
+  $("cif").value = c.cif || ""; $("tel").value = c.tel || ""; $("mail").value = c.mail || "";
+  let emb = c.emb || "", mat = c.mat || "";
+  if (!emb && !mat) { const b = barcosDe(nombre)[0]; if (b) { emb = b.emb || ""; mat = b.mat || ""; } }
+  $("emb").value = emb; $("mat").value = mat;
+  $("cliSelNom").textContent = nombre;
+  $("cliSelSub").textContent = [emb && ("⛵ " + emb), mat, c.cif].filter(Boolean).join(" · ");
+  $("cliSel").hidden = false; $("cliBuscarW").hidden = true;
+  mostrarBonoNaut();
+}
+function quitarCliente(){
+  $("cliSel").hidden = true; $("cliBuscarW").hidden = false; $("cliBuscar").value = "";
+  if (tipoForm() === "particular") { $("naut").value = ""; $("naut").hidden = true; ["cif","tel","mail","emb","mat"].forEach(i => $(i).value = ""); buscarClientes(); }
+}
+$("cliCambiar").addEventListener("click", () => { quitarCliente(); mostrarBonoNaut(); $("cliBuscar").focus(); });
+$("cliRes").addEventListener("click", e => {
+  const b = e.target.closest("[data-elegir]"); if (!b) return;
+  if (b.dataset.elegir === "__nuevo") {
+    const txt = $("cliBuscar").value.trim();
+    $("naut").hidden = false; $("naut").value = /\d/.test(txt) ? "" : txt; ["cif","tel","mail","emb","mat"].forEach(i => $(i).value = "");
+    $("cliBuscarW").hidden = true; $("cliSel").hidden = false; $("cliSelNom").textContent = "Cliente nuevo"; $("cliSelSub").textContent = "Rellena sus datos y los de su barco: quedarán guardados.";
+    $("naut").focus(); mostrarBonoNaut(); return;
+  }
+  elegirCliente(b.dataset.elegir);
+});
 function finBono(f){ const p = f.split("-"), y = +p[0], m = +p[1]-1, d = +p[2], n = m+1, last = new Date(y, n+1, 0).getDate(); return iso(new Date(y, n, Math.min(d, last))); }
 function updFin(){ const r = document.querySelector("input[name=sv]:checked"); if (r && r.value === BONO) { $("finw").hidden = false; if ($("fecha").value) $("fin").value = finBono($("fecha").value); } else { $("finw").hidden = true; $("fin").value = ""; } mostrarBonoNaut(); }
 $("svc").addEventListener("change", updFin); $("fecha").addEventListener("change", updFin);
@@ -429,14 +522,14 @@ $("save").addEventListener("click", async () => {
   const sel = document.querySelector("input[name=sv]:checked");
   const a = { id: "a" + Date.now() + Math.random().toString(36).slice(2, 6), tipo: tipoForm(), fecha: $("fecha").value, naut: $("naut").value.trim(), cif: $("cif").value.trim(), tel: $("tel").value.trim(), mail: $("mail").value.trim(), emb: $("emb").value.trim(), mat: $("mat").value.trim(), serv: sel ? sel.value : "", fin: (sel && sel.value === BONO) ? $("fin").value : "", imp: $("imp").value, resp: $("resp").value.trim(), obs: $("obs").value.trim(), estado: { enviado: false, pagado: false, facturado: false }, anulado: false };
   if (!a.fecha) return toast("Falta la fecha");
-  if (!a.naut) return toast(a.tipo === "particular" ? ($("nautSel").value === "__nueva" ? "Escribe el nombre del cliente" : "Elige el cliente") : ($("nautSel").value === "__nueva" ? "Escribe el nombre de la náutica nueva" : "Elige la náutica"));
+  if (!a.naut) return toast(a.tipo === "particular" ? (!$("naut").hidden ? "Escribe el nombre del cliente" : "Busca y elige el cliente, o crea uno nuevo") : ($("nautSel").value === "__nueva" ? "Escribe el nombre de la náutica nueva" : "Elige la náutica"));
   const yaExiste = Object.keys(nauts).find(n => norm(n) === norm(a.naut) && nauts[n].tipo === a.tipo); if (yaExiste) a.naut = yaExiste;
   if (!a.emb) return toast("Falta la embarcación");
   if (!a.serv) return toast("Elige el servicio");
   if (a.serv === BONO && !a.fin) return toast("Falta la fecha de fin del bono");
   sv("resp", a.resp);
   // ficha de la náutica (se sincroniza aunque no haya conexión)
-  try { F.setDoc(F.doc(db, "nauticas", (nauts[a.naut] && nauts[a.naut]._id) || (a.tipo === "particular" ? "p-" : "") + slug(a.naut)), { nombre: a.naut, tipo: a.tipo, cif: a.cif, tel: a.tel, mail: a.mail }, { merge: true }).catch(() => {}); } catch (e) {}
+  try { F.setDoc(F.doc(db, "nauticas", (nauts[a.naut] && nauts[a.naut]._id) || (a.tipo === "particular" ? "p-" : "") + slug(a.naut)), Object.assign({ nombre: a.naut, tipo: a.tipo, cif: a.cif, tel: a.tel, mail: a.mail }, a.tipo === "particular" && (a.emb || a.mat) ? { emb: a.emb, mat: a.mat } : {}), { merge: true }).catch(() => {}); } catch (e) {}
   $("save").disabled = true; $("save").textContent = "Guardando…";
   ultimoGuardado = a.id; ultimoNum = null;
   let num = null;
@@ -657,16 +750,17 @@ $("rCsv").addEventListener("click", () => {
 /* ---------------- clientes (corregir nombres y datos) ---------------- */
 function listaClientes(){
   const m = {};
-  Object.values(nauts).forEach(n => { m[n.tipo + "|" + n.nombre] = { nombre: n.nombre, tipo: n.tipo, cif: n.cif || "", tel: n.tel || "", mail: n.mail || "", _id: n._id }; });
-  albs.forEach(a => { const k = tipoDe(a) + "|" + a.naut; if (!m[k]) m[k] = { nombre: a.naut, tipo: tipoDe(a), cif: a.cif || "", tel: a.tel || "", mail: a.mail || "", _id: null }; });
+  Object.values(nauts).forEach(n => { m[n.tipo + "|" + n.nombre] = { nombre: n.nombre, tipo: n.tipo, cif: n.cif || "", tel: n.tel || "", mail: n.mail || "", emb: n.emb || "", mat: n.mat || "", _id: n._id }; });
+  albs.forEach(a => { const k = tipoDe(a) + "|" + a.naut; if (!m[k]) m[k] = { nombre: a.naut, tipo: tipoDe(a), cif: a.cif || "", tel: a.tel || "", mail: a.mail || "", emb: tipoDe(a) === "particular" ? a.emb || "" : "", mat: tipoDe(a) === "particular" ? a.mat || "" : "", _id: null }; });
   Object.values(m).forEach(c => c.n = albs.filter(a => a.naut === c.nombre && tipoDe(a) === c.tipo).length);
   return Object.values(m).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 }
 function renderCli(){
   if (!$("cList")) return;
   const t = (document.querySelector("input[name=cTipo]:checked") || {}).value || "nautica", q = norm($("cTxt").value);
-  const l = listaClientes().filter(c => c.tipo === t && (!q || norm(c.nombre + " " + c.cif).includes(q)));
-  $("cList").innerHTML = l.length ? l.map(c => '<div class="item" style="display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><b>' + esc(c.nombre) + '</b><span class="sub">' + [c.cif, c.tel, c.mail].filter(Boolean).map(esc).join(" · ") + (c.cif || c.tel || c.mail ? "<br>" : "") + c.n + (c.n === 1 ? " albarán" : " albaranes") + '</span></div><button class="sm sec" data-cli="' + esc(t + "|" + c.nombre) + '">✏️ Editar</button></div>').join("")
+  const palabras = q ? q.split(/\s+/) : [];
+  const l = listaClientes().filter(c => c.tipo === t && palabras.every(w => norm([c.nombre, c.cif, c.tel, c.emb, c.mat].concat(t === "particular" ? barcosDe(c.nombre).flatMap(b => [b.emb, b.mat]) : []).join(" ")).includes(w)));
+  $("cList").innerHTML = l.length ? l.map(c => '<div class="item"><b>' + esc(c.nombre) + '</b><span class="sub">' + [c.emb && ("⛵ " + c.emb), c.mat].filter(Boolean).map(esc).join(" · ") + ((c.emb || c.mat) ? "<br>" : "") + [c.cif, c.tel, c.mail].filter(Boolean).map(esc).join(" · ") + (c.cif || c.tel || c.mail ? "<br>" : "") + c.n + (c.n === 1 ? " albarán" : " albaranes") + '</span><div style="display:flex;gap:8px;margin-top:8px"><button class="sm sec" data-cli="' + esc(t + "|" + c.nombre) + '">✏️ Editar</button><button class="sm" data-albcli="' + esc(t + "|" + c.nombre) + '">📄 Albaranes</button></div></div>').join("")
     : '<span class="mut">' + (t === "particular" ? "No hay particulares guardados." : "No hay náuticas guardadas.") + '</span>';
 }
 $("cTxt").addEventListener("input", renderCli);
@@ -674,7 +768,7 @@ document.querySelectorAll("input[name=cTipo]").forEach(r => r.addEventListener("
 
 let editando = null;
 function cmTipo(){ return (document.querySelector("input[name=cmTipo]:checked") || {}).value || "nautica"; }
-document.querySelectorAll("input[name=cmTipo]").forEach(r => r.addEventListener("change", () => { $("cmLbCif").textContent = cmTipo() === "particular" ? "DNI / NIF" : "CIF"; }));
+document.querySelectorAll("input[name=cmTipo]").forEach(r => r.addEventListener("change", () => { $("cmLbCif").textContent = cmTipo() === "particular" ? "DNI / NIF" : "CIF"; $("cmBarco").hidden = cmTipo() !== "particular"; }));
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-cli]"); if (!b) return;
   const k = b.dataset.cli, c = listaClientes().find(x => x.tipo + "|" + x.nombre === k); if (!c) return;
@@ -683,6 +777,8 @@ document.addEventListener("click", e => {
   document.querySelector("input[name=cmTipo][value=" + c.tipo + "]").checked = true;
   $("cmLbCif").textContent = c.tipo === "particular" ? "DNI / NIF" : "CIF";
   $("cmNom").value = c.nombre; $("cmCif").value = c.cif; $("cmTel").value = c.tel; $("cmMail").value = c.mail;
+  const b0 = (!c.emb && !c.mat && c.tipo === "particular") ? (barcosDe(c.nombre)[0] || {}) : c;
+  $("cmEmb").value = b0.emb || ""; $("cmMat").value = b0.mat || ""; $("cmBarco").hidden = c.tipo !== "particular";
   $("cmInfo").textContent = c.n ? "Tiene " + c.n + (c.n === 1 ? " albarán. Si cambias el nombre o el tipo, también se corregirá en él." : " albaranes. Si cambias el nombre o el tipo, también se corregirá en todos.") : "";
   $("cModal").hidden = false;
 });
@@ -692,6 +788,7 @@ $("cmGuardar").addEventListener("click", async () => {
   const nombre = $("cmNom").value.trim(), tipo = cmTipo();
   if (!nombre) return toast("El nombre no puede quedar vacío");
   const datos = { nombre, tipo, cif: $("cmCif").value.trim(), tel: $("cmTel").value.trim(), mail: $("cmMail").value.trim() };
+  if (tipo === "particular") { datos.emb = $("cmEmb").value.trim(); datos.mat = $("cmMat").value.trim(); }
   const cambiaNombre = nombre !== c.nombre || tipo !== c.tipo;
   const otro = Object.values(nauts).find(n => n.nombre !== c.nombre && norm(n.nombre) === norm(nombre) && n.tipo === tipo);
   if (otro && !confirm("Ya existe «" + otro.nombre + "». ¿Quieres unir los dos en uno solo? Sus albaranes quedarán todos bajo ese nombre.")) return;
@@ -717,6 +814,55 @@ $("cmBorrar").addEventListener("click", async () => {
   try { await F.deleteDoc(F.doc(db, "nauticas", c._id)); $("cModal").hidden = true; editando = null; toast("Quitado de la lista"); }
   catch (e) { toast("No se pudo quitar: " + e.message); }
 });
+
+/* ---------------- válidos hoy (seguimiento) ---------------- */
+const BV = "Botar y varar";
+function renderHoy(){
+  const h = hoy();
+  const bv = albs.filter(a => !a.anulado && a.serv === BV && a.fecha === h).sort((a, b) => a.naut.localeCompare(b.naut, "es"));
+  const bo = albs.filter(a => !a.anulado && a.serv === BONO && a.fin && a.fecha <= h && a.fin >= h).sort((a, b) => a.fin.localeCompare(b.fin) || a.naut.localeCompare(b.naut, "es"));
+  const card = $("hoyCard");
+  if (!bv.length && !bo.length) { card.hidden = true; return; }
+  card.hidden = false;
+  const d = new Date(); $("hoyTit").textContent = "Válidos hoy · " + d.getDate() + " de " + MESES[d.getMonth()];
+  const fila = (a, tag, cls, extra) => '<div class="hoy-item"><span class="hoy-tag' + cls + '">' + tag + '</span><div class="info"><b>' + esc(a.naut) + (tipoDe(a) === "particular" ? '<span class="etq">Particular</span>' : '') + '</b><span class="mut">' + [a.emb && ("⛵ " + esc(a.emb)), a.mat && esc(a.mat), "nº " + esc(a.num), extra].filter(Boolean).join(" · ") + '</span>' + chipsHtml(a) + '</div></div>';
+  $("hoyList").innerHTML =
+    bv.map(a => fila(a, "Botar y varar<br>hoy", "", "")).join("") +
+    bo.map(a => { const q = diasEntre(h, a.fin); return fila(a, "Bono mes", " bono", "hasta el " + fdate(a.fin) + (q === 0 ? " (último día)" : " (quedan " + q + " día" + (q === 1 ? "" : "s") + ")")); }).join("");
+}
+
+/* ---------------- albaranes de un cliente ---------------- */
+let albCli = null;
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-albcli]"); if (!b) return;
+  const [tipo, ...resto] = b.dataset.albcli.split("|"); albCli = { tipo, nombre: resto.join("|") };
+  const lista = albs.filter(a => a.naut === albCli.nombre && tipoDe(a) === albCli.tipo);
+  const anios = [...new Set(lista.map(a => a.fecha.slice(0, 4)))].sort().reverse();
+  $("amAnio").innerHTML = '<option value="">Todos</option>' + anios.map(y => '<option>' + y + '</option>').join("");
+  $("amAnio").value = anios.includes(hoy().slice(0, 4)) ? hoy().slice(0, 4) : "";
+  $("amMes").innerHTML = '<option value="">Todos</option>' + MESES.map((m, i) => '<option value="' + String(i + 1).padStart(2, "0") + '">' + m + '</option>').join("");
+  $("amDia").value = "";
+  $("amTit").textContent = albCli.nombre;
+  $("aModal").hidden = false; renderAlbCli();
+});
+function renderAlbCli(){
+  if (!albCli) return;
+  const y = $("amAnio").value, m = $("amMes").value, d = $("amDia").value;
+  const lista = albs.filter(a => a.naut === albCli.nombre && tipoDe(a) === albCli.tipo && (d ? a.fecha === d : ((!y || a.fecha.slice(0, 4) === y) && (!m || a.fecha.slice(5, 7) === m))))
+    .sort((a, b) => b.fecha.localeCompare(a.fecha) || b.num.localeCompare(a.num, "es", { numeric: true }));
+  const vivos = lista.filter(a => !a.anulado), imp = vivos.reduce((t, a) => t + (tieneImp(a) ? Number(a.imp) : 0), 0);
+  const sinPag = vivos.filter(a => !(a.estado || {}).pagado).length;
+  $("amTot").innerHTML = '<div><b>' + vivos.length + '</b><span>albaranes</span></div><div><b>' + (imp ? euros(imp) : "–") + '</b><span>importe</span></div><div><b>' + sinPag + '</b><span>sin pagar</span></div>';
+  const cuenta = {}; vivos.forEach(a => cuenta[a.serv] = (cuenta[a.serv] || 0) + 1);
+  $("amServ").innerHTML = SERV.filter(sv => cuenta[sv]).map(sv => '<div><span>' + esc(sv) + '</span><b>' + cuenta[sv] + '</b></div>').join("");
+  $("amList").innerHTML = lista.length ? lista.map(a =>
+    '<div class="item' + (a.anulado ? " anulado" : "") + '"><b>' + esc(a.num) + ' · ' + fdate(a.fecha) + '</b><span class="sub">' + esc(a.serv) + (a.fin ? " hasta " + fdate(a.fin) : "") + (a.emb ? " · ⛵ " + esc(a.emb) : "") + (a.mat ? " (" + esc(a.mat) + ")" : "") + (tieneImp(a) ? " · " + euros(a.imp) : "") + '</span>' +
+    chipsHtml(a) + (a.anulado ? "" : '<div class="acts">' + actsHtml(a.num, true) + '</div>') + '</div>').join("")
+    : '<span class="mut">No hay albaranes en ese periodo.</span>';
+}
+["amAnio","amMes"].forEach(i => $(i).addEventListener("input", () => { $("amDia").value = ""; renderAlbCli(); }));
+$("amDia").addEventListener("input", renderAlbCli);
+$("amCerrar").addEventListener("click", () => { $("aModal").hidden = true; albCli = null; });
 
 /* ---------------- avisos de bono ---------------- */
 function bonos(){ return albs.filter(a => !a.anulado && a.serv === BONO && a.fin); }
