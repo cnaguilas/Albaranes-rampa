@@ -228,7 +228,8 @@ footer button{background:none;color:var(--pri);padding:4px;font-weight:600;text-
 <h2>Resumen mensual por cliente</h2>
 <label>Mes</label><input type="month" id="rMes">
 <div class="totales" id="rTot" style="margin-top:12px"></div>
-<button class="sec full" id="rCsv">⬇ Descargar mes en Excel (CSV)</button>
+<button class="full" id="rPdf">📄 PDF de facturación de náuticas</button>
+<button class="sec full" id="rCsv" style="margin-top:8px">⬇ Descargar mes en Excel (CSV)</button>
 </div>
 <div class="card"><div id="rList"></div></div>
 </section>
@@ -306,6 +307,14 @@ const SERV = ["Botar por rampa","Varar por rampa","Botar y varar","Bono mes ramp
 const BONO = "Bono mes rampa";
 const CORTO = {"Botar por rampa":"Botar","Varar por rampa":"Varar","Botar y varar":"Botar y varar","Bono mes rampa":"Bono mes"};
 const EMP = {n:"PUERTO DEPORTIVO C.N. ÁGUILAS",l:["PASEO DE PARRA, 44","30880 ÁGUILAS (MURCIA)","CIF: A73846255","TLF: 655 441 929 / 670 445 725","administracion@cnaguilas.com"]};
+const RGPD = "En cumplimiento de lo previsto por el Reglamento (UE) 2016/679, del Parlamento Europeo y del Consejo, de 27 de abril de 2016 y la Ley Orgánica 3/2018 de 5 de diciembre (LOPDGDD), relativo a la protección de las personas físicas en lo que respecta al tratamiento de datos personales (Reglamento Europeo de Protección de Datos) le informamos que los datos personales que puedan constar en este documento se encuentran incorporados en un fichero propiedad del C.N. Águilas con la finalidad de gestionar nuestra relación negocial y poder informarle de nuestros servicios. Si desea ejercitar sus derechos de acceso, oposición, rectificación, cancelación, supresión, limitación y portabilidad lo podrá hacer dirigiéndose por escrito a Paseo de Parra, N.44, 30880 Águilas, Murcia.";
+// Escribe el texto de protección de datos a partir de la altura y (mm) y devuelve dónde termina
+function textoRGPD(d, y, m, W){
+  d.setFont("helvetica","normal"); d.setFontSize(7); d.setTextColor(90);
+  const lineas = d.splitTextToSize(RGPD, W - 2*m);
+  d.text(lineas, m, y); d.setTextColor(0);
+  return y + lineas.length * 3;
+}
 const DIAS_AVISO = 5;      // avisar cuando a un bono le queden estos días o menos
 const DIAS_CADUCADO = 7;   // seguir avisando hasta estos días después de caducar
 
@@ -323,7 +332,7 @@ const mesTxt = ym => { const [y, m] = ym.split("-"); return MESES[+m-1] + " " + 
 const diasEntre = (a, b) => Math.round((new Date(b + "T12:00") - new Date(a + "T12:00")) / 864e5);
 const norm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 const slug = s => norm(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "sin-nombre";
-const euros = n => Number(n).toFixed(2).replace(".", ",") + " €";
+const euros = n => { const [e, c] = Number(n).toFixed(2).split("."); return e.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + c + " €"; };
 const tipoDe = x => (x && x.tipo === "particular") ? "particular" : "nautica";
 const tipoForm = () => (document.querySelector("input[name=tipo]:checked") || {}).value || "nautica";
 const tieneImp = a => a.imp !== "" && a.imp != null && !isNaN(Number(a.imp));
@@ -576,7 +585,8 @@ function pdfBlob(a){
   d.setLineWidth(.3); d.setDrawColor(150);
   d.rect(m, 225, 85, 35); d.rect(W-m-85, 225, 85, 35);
   d.setFontSize(9); d.setTextColor(90); d.text("Firma y sello del Puerto" + (a.resp ? " (" + a.resp + ")" : ""), m+3, 230); d.text(part ? "Conforme cliente" : "Conforme náutica", W-m-82, 230);
-  d.setFontSize(8); d.text("Documento generado por CN Águilas · " + EMP.l[4], W/2, 285, { align: "center" });
+  textoRGPD(d, 266, m, W);
+  d.setFontSize(8); d.setTextColor(90); d.text("Documento generado por CN Águilas · " + EMP.l[4], W/2, 291, { align: "center" }); d.setTextColor(0);
   return d.output("blob");
 }
 const fname = a => "Albaran-" + a.num + "-" + a.naut.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9]+/g, "_").slice(0, 30) + ".pdf";
@@ -739,6 +749,93 @@ async function copiarNaut(naut){
   try { await navigator.clipboard.writeText(textoNaut(r, ym)); toast("Resumen copiado. Pégalo en WhatsApp o en un correo."); }
   catch (e) { toast("No se pudo copiar"); }
 }
+function pdfFacturacion(ym){
+  const J = window.jspdf; if (!J) throw new Error("PDF no disponible (abre la app una vez con conexión)");
+  const lista = albs.filter(a => !a.anulado && tipoDe(a) === "nautica" && a.fecha.slice(0, 7) === ym);
+  const grupos = {};
+  lista.forEach(a => { (grupos[a.naut] = grupos[a.naut] || []).push(a); });
+  const nombres = Object.keys(grupos).sort((a, b) => a.localeCompare(b, "es"));
+  const d = new J.jsPDF({ unit: "mm", format: "a4" }), W = 210, H = 297, m = 15;
+  const impNum = a => tieneImp(a) ? Number(a.imp) : 0;
+  const cab = () => {
+    d.setFont("helvetica","bold"); d.setFontSize(12); d.text(EMP.n, m, 18);
+    d.setFont("helvetica","normal"); d.setFontSize(8.5);
+    d.text(EMP.l.slice(0, 3).join("  ·  "), m, 23); d.text(EMP.l.slice(3).join("  ·  "), m, 27);
+    d.setDrawColor(11,79,138); d.setLineWidth(.5); d.line(m, 30, W-m, 30);
+  };
+  let y = 0;
+  const nuevaPag = () => { d.addPage(); cab(); y = 38; };
+  const hueco = h => { if (y + h > H - 18) nuevaPag(); };
+  cab();
+  d.setFont("helvetica","bold"); d.setFontSize(18); d.text("Resumen de facturación · Náuticas", m, 41);
+  d.setFontSize(13); d.text(mesTxt(ym).charAt(0).toUpperCase() + mesTxt(ym).slice(1), m, 48);
+  d.setFont("helvetica","normal"); d.setFontSize(9); d.setTextColor(90);
+  d.text("Servicios de rampa. Albaranes anulados no incluidos. Generado el " + fdate(hoy()) + ".", m, 54); d.setTextColor(0);
+  y = 63;
+
+  // Tabla resumen por náutica
+  const cols = [{ t: "Náutica", x: m, w: 62 }, { t: "Botar", x: 79, w: 16 }, { t: "Varar", x: 97, w: 16 }, { t: "Botar y varar", x: 115, w: 22 }, { t: "Bono mes", x: 139, w: 16 }, { t: "Albaranes", x: 157, w: 16 }, { t: "Importe", x: W - m, w: 20, r: true }];
+  const filaCab = () => { d.setFillColor(232,240,250); d.rect(m, y - 5, W - 2*m, 7, "F"); d.setFont("helvetica","bold"); d.setFontSize(8.5); cols.forEach(c => d.text(c.t, c.r ? c.x : c.x + (c === cols[0] ? 1 : 0), y, c.r ? { align: "right" } : {})); y += 7; };
+  if (!nombres.length) { d.setFont("helvetica","normal"); d.setFontSize(11); d.text("No hay albaranes de náuticas en " + mesTxt(ym) + ".", m, y); y += 10; }
+  else {
+    filaCab();
+    let tot = { b: 0, v: 0, bv: 0, bo: 0, n: 0, imp: 0 };
+    d.setFont("helvetica","normal"); d.setFontSize(9);
+    nombres.forEach(n => {
+      hueco(7);
+      const g = grupos[n], c = s => g.filter(a => a.serv === s).length;
+      const r = { b: c("Botar por rampa"), v: c("Varar por rampa"), bv: c("Botar y varar"), bo: c(BONO), n: g.length, imp: g.reduce((t, a) => t + impNum(a), 0) };
+      Object.keys(tot).forEach(k => tot[k] += r[k]);
+      d.text(d.splitTextToSize(n, 60)[0], m + 1, y);
+      [r.b, r.v, r.bv, r.bo, r.n].forEach((v, i) => d.text(String(v || "–"), cols[i + 1].x + 2, y));
+      d.text(r.imp ? euros(r.imp) : "–", W - m, y, { align: "right" });
+      d.setDrawColor(220); d.setLineWidth(.2); d.line(m, y + 2, W - m, y + 2); y += 7;
+    });
+    hueco(8); d.setFont("helvetica","bold");
+    d.text("TOTAL", m + 1, y);
+    [tot.b, tot.v, tot.bv, tot.bo, tot.n].forEach((v, i) => d.text(String(v), cols[i + 1].x + 2, y));
+    d.text(euros(tot.imp), W - m, y, { align: "right" }); y += 12;
+
+    // Detalle por náutica
+    nombres.forEach(n => {
+      const g = grupos[n].slice().sort((a, b) => a.fecha.localeCompare(b.fecha) || a.num.localeCompare(b.num, "es", { numeric: true }));
+      const ficha = nauts[n] || {};
+      hueco(24);
+      d.setFont("helvetica","bold"); d.setFontSize(11); d.text(n, m, y);
+      d.setFont("helvetica","normal"); d.setFontSize(8.5); d.setTextColor(90);
+      d.text([ficha.cif || g[0].cif ? "CIF: " + (ficha.cif || g[0].cif) : "", ficha.mail || g[0].mail || "", ficha.tel || g[0].tel || ""].filter(Boolean).join("   ·   "), m, y + 5); d.setTextColor(0);
+      y += 11;
+      const dc = [{ t: "Nº", x: m + 1 }, { t: "Fecha", x: 37 }, { t: "Embarcación", x: 57 }, { t: "Matrícula", x: 102 }, { t: "Servicio", x: 132 }, { t: "Importe", x: W - m, r: true }];
+      const cabDet = () => { d.setFillColor(243,246,250); d.rect(m, y - 4.5, W - 2*m, 6.5, "F"); d.setFont("helvetica","bold"); d.setFontSize(8); dc.forEach(c => d.text(c.t, c.x, y, c.r ? { align: "right" } : {})); y += 6.5; d.setFont("helvetica","normal"); };
+      cabDet();
+      g.forEach(a => {
+        if (y + 6 > H - 18) { nuevaPag(); d.setFont("helvetica","bold"); d.setFontSize(9); d.text(n + " (continuación)", m, y); y += 6; cabDet(); }
+        d.setFontSize(8.5);
+        d.text(a.num, dc[0].x, y); d.text(fdate(a.fecha), dc[1].x, y);
+        d.text(d.splitTextToSize(a.emb || "-", 43)[0], dc[2].x, y); d.text(d.splitTextToSize(a.mat || "-", 28)[0], dc[3].x, y);
+        d.text(a.serv === BONO && a.fin ? "Bono mes (hasta " + fdate(a.fin).slice(0, 5) + ")" : a.serv, dc[4].x, y);
+        d.text(tieneImp(a) ? euros(a.imp) : "–", W - m, y, { align: "right" });
+        d.setDrawColor(230); d.setLineWidth(.15); d.line(m, y + 1.8, W - m, y + 1.8); y += 6;
+      });
+      const sub = g.reduce((t, a) => t + impNum(a), 0);
+      hueco(8); d.setFont("helvetica","bold"); d.setFontSize(9);
+      d.text(g.length + (g.length === 1 ? " albarán" : " albaranes"), m + 1, y + 1);
+      d.text("Subtotal: " + (sub ? euros(sub) : "–"), W - m, y + 1, { align: "right" }); y += 12;
+    });
+  }
+  // Protección de datos al final
+  if (y + 22 > H - 12) nuevaPag();
+  textoRGPD(d, y + 2, m, W);
+  // Numeración de páginas
+  const np = d.getNumberOfPages();
+  for (let i = 1; i <= np; i++) { d.setPage(i); d.setFont("helvetica","normal"); d.setFontSize(8); d.setTextColor(90); d.text("Facturación náuticas · " + mesTxt(ym) + " · página " + i + " de " + np, W/2, H - 8, { align: "center" }); d.setTextColor(0); }
+  return d.output("blob");
+}
+$("rPdf").addEventListener("click", () => {
+  const ym = $("rMes").value; if (!ym) return toast("Elige el mes");
+  try { descargar(pdfFacturacion(ym), "Facturacion_nauticas_" + ym + ".pdf"); toast("PDF de facturación descargado"); }
+  catch (e) { toast("No se pudo crear el PDF: " + e.message); }
+});
 $("rCsv").addEventListener("click", () => {
   const ym = $("rMes").value; if (!ym) return;
   const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
